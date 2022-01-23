@@ -4,6 +4,26 @@ use serde::de::DeserializeOwned;
 
 use crate::error::{Error, Result};
 
+#[derive(Copy, Clone)]
+pub struct MissingBody;
+
+trait Missing {
+    fn missing() -> Option<Self>
+    where
+        Self: Sized,
+    {
+        None
+    }
+}
+
+impl<T: DeserializeOwned> Missing for T {}
+
+impl Missing for MissingBody {
+    fn missing() -> Option<Self> {
+        Some(Self)
+    }
+}
+
 #[derive(Default)]
 pub struct JsonFetcher;
 
@@ -50,7 +70,11 @@ impl JsonFetcher {
 async fn fetch_json<Body: DeserializeOwned>(request: Request) -> Result<(Response, Body)> {
     let response = request.send().await?;
     if response.status() == 200 {
-        let body = response.json().await?;
+        let body = if let Some(body) = Body::missing() {
+            body
+        } else {
+            response.json().await?
+        };
         Ok((response, body))
     } else {
         Err(Error::FailureResponse(
