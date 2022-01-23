@@ -1,0 +1,22 @@
+[package]
+name = "wasm-web-helpers"
+version = "0.1.0"
+authors = [
+    "Alexander Mescheryakov <freecoder.xx@gmail.com>",
+    "Noogen Team <info.noogen@gmail.com>",
+]
+edition = "2021"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/noogen-projects/wasm-web-helpers"
+description = "The helper suite for WebAssembly web clients"
+keywords = ["noogen", "web", "helpers", "http", "websocket"]
+categories = ["web-programming", "wasm"]
+
+[dependencies]
+thiserror = "1.0"
+serde = "1.0"
+reqwasm = "0.4"
+wasm-bindgen-futures = "0.4"
+futures-util = { version = "0.3", features = ["sink"] }
+gloo-utils = "0.1"
