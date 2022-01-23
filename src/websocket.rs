@@ -1,8 +1,7 @@
 pub use gloo_utils::errors::JsError;
 pub use reqwasm::websocket::{futures::WebSocket, Message, WebSocketError};
 
-use std::sync::mpsc;
-
+use futures_channel::mpsc;
 use futures_util::{stream::StreamExt, SinkExt};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -19,7 +18,7 @@ impl From<()> for ControlFlow {
 
 #[derive(Clone)]
 pub struct WebSocketService {
-    sender: mpsc::Sender<Message>,
+    sender: mpsc::UnboundedSender<Message>,
 }
 
 impl WebSocketService {
@@ -36,10 +35,10 @@ impl WebSocketService {
     {
         let ws = WebSocket::open(url.as_ref())?;
         let (mut sink, mut stream) = ws.split();
-        let (sender, receiver) = mpsc::channel();
+        let (sender, mut receiver) = mpsc::unbounded();
 
         wasm_bindgen_futures::spawn_local(async move {
-            while let Ok(msg) = receiver.recv() {
+            while let Some(msg) = receiver.next().await {
                 if send_callback(sink.send(msg).await).into() == ControlFlow::Break {
                     break;
                 }
@@ -59,7 +58,7 @@ impl WebSocketService {
         Ok(Self { sender })
     }
 
-    pub fn send(&mut self, msg: Message) -> Result<(), mpsc::SendError<Message>> {
-        self.sender.send(msg)
+    pub fn send(&mut self, msg: Message) -> Result<(), mpsc::TrySendError<Message>> {
+        self.sender.unbounded_send(msg)
     }
 }
