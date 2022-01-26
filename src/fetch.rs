@@ -22,7 +22,7 @@ pub struct JsonFetcher;
 impl JsonFetcher {
     pub fn fetch<Body: 'static + DeserializeOwned>(
         request: Request,
-        callback: impl FnOnce(Result<(Response, Option<Body>)>) + 'static,
+        callback: impl FnOnce(Result<(Response, Result<Body>)>) + 'static,
     ) {
         wasm_bindgen_futures::spawn_local(async move {
             let result = fetch_json::<Body>(request).await;
@@ -32,7 +32,7 @@ impl JsonFetcher {
 
     pub fn send_get<Body: 'static + DeserializeOwned>(
         uri: impl AsRef<str>,
-        callback: impl FnOnce(Result<(Response, Option<Body>)>) + 'static,
+        callback: impl FnOnce(Result<(Response, Result<Body>)>) + 'static,
     ) {
         let request = Request::get(uri.as_ref());
         Self::fetch(request, callback);
@@ -41,7 +41,7 @@ impl JsonFetcher {
     pub fn send_post<Body: 'static + DeserializeOwned>(
         uri: impl AsRef<str>,
         body: impl Into<String>,
-        callback: impl FnOnce(Result<(Response, Option<Body>)>) + 'static,
+        callback: impl FnOnce(Result<(Response, Result<Body>)>) + 'static,
     ) {
         let request = Request::post(uri.as_ref()).body(body.into());
         Self::fetch(request, callback);
@@ -50,7 +50,7 @@ impl JsonFetcher {
     pub fn send_post_json<Body: 'static + DeserializeOwned>(
         uri: impl AsRef<str>,
         body: impl Into<String>,
-        callback: impl FnOnce(Result<(Response, Option<Body>)>) + 'static,
+        callback: impl FnOnce(Result<(Response, Result<Body>)>) + 'static,
     ) {
         let request = Request::post(uri.as_ref())
             .header("Content-Type", "application/json")
@@ -59,14 +59,10 @@ impl JsonFetcher {
     }
 }
 
-async fn fetch_json<Body: DeserializeOwned>(request: Request) -> Result<(Response, Option<Body>)> {
+async fn fetch_json<Body: DeserializeOwned>(request: Request) -> Result<(Response, Result<Body>)> {
     let response = request.send().await?;
     if response.status() == 200 {
-        let body = if response.body_used() {
-            Some(response.json().await?)
-        } else {
-            None
-        };
+        let body = response.json().await.map_err(Into::into);
         Ok((response, body))
     } else {
         Err(Error::FailureResponse(
