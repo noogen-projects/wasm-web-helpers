@@ -2,7 +2,7 @@ pub use reqwasm::http::{Request, Response};
 
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 
-use crate::error::{Error, Result};
+use crate::error::{Error, ReqwasmResult, Result};
 
 #[derive(Copy, Clone)]
 pub struct MissingBody;
@@ -25,7 +25,7 @@ impl JsonFetcher {
         callback: impl FnOnce(Result<(Response, Result<Body>)>) + 'static,
     ) {
         wasm_bindgen_futures::spawn_local(async move {
-            let result = fetch_json::<Body>(request).await;
+            let result = fetch_success_json::<Body>(request).await;
             callback(result);
         });
     }
@@ -59,15 +59,53 @@ impl JsonFetcher {
     }
 }
 
-async fn fetch_json<Body: DeserializeOwned>(request: Request) -> Result<(Response, Result<Body>)> {
+pub async fn fetch(request: Request) -> ReqwasmResult<Response> {
+    request.send().await
+}
+
+pub async fn fetch_text(request: Request) -> ReqwasmResult<(Response, ReqwasmResult<String>)> {
     let response = request.send().await?;
-    if response.status() == 200 {
+    let body = response.text().await;
+    Ok((response, body))
+}
+
+pub async fn fetch_json<Body: DeserializeOwned>(request: Request) -> ReqwasmResult<(Response, ReqwasmResult<Body>)> {
+    let response = request.send().await?;
+    let body = response.json().await;
+    Ok((response, body))
+}
+
+pub async fn fetch_success(request: Request) -> Result<Response> {
+    let response = request.send().await?;
+    let status = response.status();
+
+    if status == 200 {
+        Ok(response)
+    } else {
+        Err(Error::FailureResponse(status, format!("{:?}", response.text().await)))
+    }
+}
+
+pub async fn fetch_success_text(request: Request) -> Result<(Response, Result<String>)> {
+    let response = request.send().await?;
+    let body = response.text().await.map_err(Into::into);
+    let status = response.status();
+
+    if status == 200 {
+        Ok((response, body))
+    } else {
+        Err(Error::FailureResponse(status, format!("{:?}", body)))
+    }
+}
+
+pub async fn fetch_success_json<Body: DeserializeOwned>(request: Request) -> Result<(Response, Result<Body>)> {
+    let response = request.send().await?;
+    let status = response.status();
+
+    if status == 200 {
         let body = response.json().await.map_err(Into::into);
         Ok((response, body))
     } else {
-        Err(Error::FailureResponse(
-            response.status(),
-            format!("{:?}", response.text().await),
-        ))
+        Err(Error::FailureResponse(status, format!("{:?}", response.text().await)))
     }
 }
