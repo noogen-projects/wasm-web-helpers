@@ -1,6 +1,6 @@
 [package]
 name = "wasm-web-helpers"
-version = "0.1.6"
+version = "0.1.7"
 authors = [
     "Alexander Mescheryakov <freecoder.xx@gmail.com>",
     "Noogen Team <info.noogen@gmail.com>",
@@ -16,7 +16,8 @@ categories = ["web-programming", "wasm"]
 [dependencies]
 thiserror = "1.0"
 serde = "1.0"
-reqwasm = "0.4"
+reqwasm = "0.5"
+wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 futures-util = { version = "0.3", features = ["sink"] }
 gloo-utils = "0.1"

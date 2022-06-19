@@ -1,4 +1,5 @@
 pub use reqwasm::http::{Request, Response};
+pub use wasm_bindgen::JsValue;
 
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 
@@ -40,21 +41,21 @@ impl JsonFetcher {
 
     pub fn send_post<Body: 'static + DeserializeOwned>(
         uri: impl AsRef<str>,
-        body: impl Into<String>,
+        body: impl Into<JsValue>,
         callback: impl FnOnce(Result<(Response, Result<Body>)>) + 'static,
     ) {
-        let request = Request::post(uri.as_ref()).body(body.into());
+        let request = Request::post(uri.as_ref()).body(body);
         Self::fetch(request, callback);
     }
 
     pub fn send_post_json<Body: 'static + DeserializeOwned>(
         uri: impl AsRef<str>,
-        body: impl Into<String>,
+        body: impl Into<JsValue>,
         callback: impl FnOnce(Result<(Response, Result<Body>)>) + 'static,
     ) {
         let request = Request::post(uri.as_ref())
             .header("Content-Type", "application/json")
-            .body(body.into());
+            .body(body);
         Self::fetch(request, callback);
     }
 }
